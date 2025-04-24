@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        #taskInput {
+            width: 70%;
+            padding: 10px;
+            margin-right: 10px;
+        }
+        #addButton {
+            padding: 10px 15px;
+            margin: 5px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: #fff;
+            margin: 10px 0;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .deleteButton, .moveUpButton, .moveDownButton {
+            background: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        .deleteButton:hover, .moveUpButton:hover, .moveDownButton:hover {
+            background: #ff1a1a;
+        }
+        .taskText {
+            flex-grow: 1;
+            margin-left: 10px;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: gray;
+        }
+        #completedTasksSection {
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        #completedTasksSection h2 {
+            font-size: 1.2em;
+        }
+        #completedTasksSection button {
+            padding: 8px 12px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>To-Do List</h1>
+    <input type="text" id="taskInput" placeholder="Enter a new task">
+    <button id="addButton">Add</button>
+
+    <ul id="taskList"></ul>
+
+    <div id="completedTasksSection">
+        <h2>Completed Tasks</h2>
+        <button id="deleteCompletedButton">Delete Completed Tasks</button>
+        <ul id="completedTasks"></ul>
+    </div>
+
+    <script>
+        function addTask(taskText, completed = false) {
+            const li = document.createElement('li');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = completed;
+            checkbox.addEventListener('change', function() {
+                if (checkbox.checked) {
+                    taskSpan.classList.add('completed');
+                    moveTaskToCompleted(li, taskText);
+                } else {
+                    taskSpan.classList.remove('completed');
+                    moveTaskToActive(li, taskText);
+                }
+                updateTaskInStorage(taskText, checkbox.checked);
+            });
+
+            const taskSpan = document.createElement('span');
+            taskSpan.textContent = taskText;
+            taskSpan.className = 'taskText';
+            if (completed) {
+                taskSpan.classList.add('completed');
+            }
+
+            const moveUpButton = document.createElement('button');
+            moveUpButton.textContent = 'Up';
+            moveUpButton.className = 'moveUpButton';
+            moveUpButton.addEventListener('click', function() {
+                moveTaskUp(li);
+            });
+
+            const moveDownButton = document.createElement('button');
+            moveDownButton.textContent = 'Down';
+            moveDownButton.className = 'moveDownButton';
+            moveDownButton.addEventListener('click', function() {
+                moveTaskDown(li);
+            });
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.className = 'deleteButton';
+            deleteButton.addEventListener('click', function() {
+                li.remove();
+                removeTaskFromStorage(taskText);
+            });
+
+            li.appendChild(checkbox);
+            li.appendChild(taskSpan);
+            li.appendChild(moveUpButton);
+            li.appendChild(moveDownButton);
+            li.appendChild(deleteButton);
+
+            if (completed) {
+                document.getElementById('completedTasks').appendChild(li);
+            } else {
+                document.getElementById('taskList').appendChild(li);
+            }
+        }
+
+        function saveTaskToStorage(taskText, completed = false) {
+            const tasks = getTasksFromStorage();
+            tasks.push({ text: taskText, completed: completed });
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function updateTaskInStorage(taskText, completed) {
+            const tasks = getTasksFromStorage();
+            const taskIndex = tasks.findIndex(task => task.text === taskText);
+            if (taskIndex !== -1) {
+                tasks[taskIndex].completed = completed;
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+            }
+        }
+
+        function removeTaskFromStorage(taskText) {
+            const tasks = getTasksFromStorage().filter(task => task.text !== taskText);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function getTasksFromStorage() {
+            const tasks = localStorage.getItem('tasks');
+            return tasks ? JSON.parse(tasks) : [];
+        }
+
+        function loadTasks() {
+            const tasks = getTasksFromStorage();
+            tasks.forEach(task => addTask(task.text, task.completed));
+        }
+
+        function deleteCompletedTasks() {
+            const tasks = getTasksFromStorage().filter(task => !task.completed);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+            document.getElementById('taskList').innerHTML = '';
+            document.getElementById('completedTasks').innerHTML = '';
+            loadTasks();
+        }
+
+        function moveTaskToCompleted(taskElement, taskText) {
+            document.getElementById('taskList').removeChild(taskElement);
+            document.getElementById('completedTasks').appendChild(taskElement);
+        }
+
+        function moveTaskToActive(taskElement, taskText) {
+            document.getElementById('completedTasks').removeChild(taskElement);
+            document.getElementById('taskList').appendChild(taskElement);
+        }
+
+        function moveTaskUp(taskElement) {
+            const previousElement = taskElement.previousElementSibling;
+            if (previousElement) {
+                taskElement.parentNode.insertBefore(taskElement, previousElement);
+            }
+        }
+
+        function moveTaskDown(taskElement) {
+            const nextElement = taskElement.nextElementSibling;
+            if (nextElement) {
+                taskElement.parentNode.insertBefore(nextElement, taskElement);
+            }
+        }
+
+        document.getElementById('addButton').addEventListener('click', function() {
+            const taskInput = document.getElementById('taskInput');
+            const taskText = taskInput.value.trim();
+
+            if (taskText !== '') {
+                addTask(taskText);
+                saveTaskToStorage(taskText);
+                taskInput.value = ''; // Clear the input field
+            } else {
+                alert('Please enter a task!');
+            }
+        });
+
+        document.getElementById('taskInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                const taskInput = document.getElementById('taskInput');
+                const taskText = taskInput.value.trim();
+
+                if (taskText !== '') {
+                    addTask(taskText);
+                    saveTaskToStorage(taskText);
+                    taskInput.value = ''; // Clear the input field
+                } else {
+                    alert('Please enter a task!');
+                }
+            }
+        });
+
+        document.getElementById('deleteCompletedButton').addEventListener('click', deleteCompletedTasks);
+
+        // Load tasks from localStorage when the page loads
+        window.onload = loadTasks;
+
+    </script>
+
+</body>
+</html>
